@@ -4,7 +4,10 @@
             
             <div class="flex items-center">
                 <a href="/" class="shrink-0 flex items-center gap-3 group">
-                    <img class="h-9 w-9 transition-transform duration-300 group-hover:scale-110" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=500" alt="Logo">
+                    <img class="h-10 w-10 transition-transform duration-300 group-hover:scale-110 rounded-full shadow-lg ring-2 ring-indigo-500/50" 
+                         src="{{ asset('img/logo.png') }}" 
+                         alt="Logo NIVRA02">
+                    
                     <span class="text-xl font-bold tracking-wider text-white group-hover:text-indigo-400 transition-colors">
                         NIVRA02
                     </span>

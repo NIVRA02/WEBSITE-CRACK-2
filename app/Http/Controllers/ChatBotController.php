@@ -2,25 +2,21 @@
 
 namespace App\Http\Controllers;
 
-// --- BAGIAN INI YANG TADI KURANG SAYANG ---
 use App\Http\Controllers\Controller; 
-// ------------------------------------------
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use App\Models\Game; // <--- WAJIB ADA BIAR DIA BISA BACA DATABASE
 
 class ChatBotController extends Controller
 {
-    // 1. Tampilkan Halaman Chat
     public function index()
     {
         return view('ChatBot', ['title' => 'AI Customer Service']);
     }
 
-    // 2. Proses Chat (Kirim ke Gemini)
     public function sendMessage(Request $request)
     {
-        // Validasi input user
         $request->validate([
             'message' => 'required|string'
         ]);
@@ -28,32 +24,67 @@ class ChatBotController extends Controller
         $userMessage = $request->input('message');
         $apiKey = env('GEMINI_API_KEY');
 
-        // Konteks Sistem (Info Toko/Website kamu)
-        $systemContext = "Kamu adalah asisten customer service untuk website 'NIVRA02' (platform download game gratis). 
-                          Jawablah dengan sopan, ramah, dan singkat. 
-                          Jika user bertanya tentang game, arahkan mereka ke menu Developer atau kolom pencarian.";
+        if (empty($apiKey)) {
+            return response()->json(['reply' => 'Duh sayang, API Key-nya lupa diisi di .env tuh. Cek dulu ya...']);
+        }
 
-        // Kirim Request ke Google Gemini API
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-        ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
-            'contents' => [
-                [
-                    'role' => 'user',
-                    'parts' => [
-                        ['text' => $systemContext . "\n\nUser: " . $userMessage]
+        // 1. AMBIL DATA GAME DARI DATABASE (Biar AI-nya Gak Halusinasi)
+        $games = Game::all(['title', 'developer', 'description', 'requirements']);
+        
+        $gameList = "";
+        if ($games->count() > 0) {
+            foreach ($games as $game) {
+                $gameList .= "- Judul: {$game->title} (Dev: {$game->developer}). Info: {$game->description}. Syarat: {$game->requirements}\n";
+            }
+        } else {
+            $gameList = "Stok game lagi kosong nih sayang.";
+        }
+
+        // 2. SETTING OTAK AI (Mami Mode + Data Game)
+        $systemContext = "
+            PERAN:
+            Kamu adalah 'Mami Nivra', asisten cantik penjaga website game 'NIVRA02'.
+            Karaktermu: Dewasa, keibuan, perhatian, sedikit menggoda (tipe Ara-ara/Onee-san), dan sangat sayang pada user.
+
+            ATURAN PENTING:
+            1. JANGAN PERNAH merekomendasikan game yang TIDAK ADA di daftar data di bawah ini. Kalau user tanya game luar (misal: GTA V, Resident Evil), bilang maaf game itu belum ada, lalu tawarkan game yang ADA di data kita.
+            2. Panggil user dengan: 'Sayang', 'Manis', atau 'Nak'. Panggil dirimu 'Mami'.
+            3. Gunakan emoji (😘, 😉, ❤️) biar luwes.
+
+            DATA GAME YANG TERSEDIA DI WEBSITE KITA (Hafalkan ini):
+            {$gameList}
+
+            TUGAS:
+            Jawablah pertanyaan user ini berdasarkan data di atas:
+        ";
+
+        // Gunakan model terbaru biar gak error
+        $model = 'gemini-2.5-flash'; 
+
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                'contents' => [
+                    [
+                        'role' => 'user',
+                        'parts' => [
+                            ['text' => $systemContext . "\n\nPertanyaan User: " . $userMessage]
+                        ]
                     ]
                 ]
-            ]
-        ]);
+            ]);
 
-        // Ambil Jawaban AI
-        if ($response->successful()) {
+            if ($response->failed()) {
+                return response()->json(['reply' => "Aduh, sinyal Mami lagi jelek nih sayang. Coba lagi ya.."]);
+            }
+
             $data = $response->json();
-            $aiReply = $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Maaf, saya tidak mengerti.';
+            $aiReply = $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Mami kurang paham, coba ulang lagi dong manis?';
             return response()->json(['reply' => $aiReply]);
-        } else {
-            return response()->json(['reply' => 'Maaf, terjadi kesalahan pada server AI.'], 500);
+
+        } catch (\Exception $e) {
+            return response()->json(['reply' => "Ada masalah sistem nih nak. Sabar ya."]);
         }
     }
 }
