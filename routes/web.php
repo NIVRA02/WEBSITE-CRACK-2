@@ -4,10 +4,16 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
-use App\Http\Controllers\GameController;
-use App\Http\Controllers\CommentController;
+use App\Http\Controllers\GameController; // <--- WAJIB
+use App\Http\Controllers\CommentController; // <--- WAJIB
 
 // --- Rute Halaman Statis ---
+// Route yang ini bisa tetap menggunakan fungsi (closure)
+Route::get('/', function () {
+    // Arahkan / ke controller index Game, bukan home view statis lagi
+    return app(GameController::class)->index(); 
+});
+
 Route::get('/developer', function () {
     return view('developer', ['title' => 'Developer']);
 });
@@ -20,13 +26,11 @@ Route::get('/contact', function () {
 
 
 // --- Rute AUTHENTIKASI (Login, Register, Logout) ---
-
-// 1. Tampilkan Halaman Register
+// Gunakan route yang lebih rapi dengan nama
 Route::get('/register', function () {
     return view('register', ['title' => 'Daftar Akun Baru']);
 })->name('register')->middleware('guest');
 
-// 2. Proses Data Register
 Route::post('/register', function (Request $request) {
     $attributes = $request->validate([
         'name' => ['required', 'min:3', 'max:255'],
@@ -39,12 +43,10 @@ Route::post('/register', function (Request $request) {
 })->middleware('guest');
 
 
-// 3. Tampilkan Halaman Login
 Route::get('/login', function () {
     return view('login', ['title' => 'Login Akun']);
 })->name('login')->middleware('guest');
 
-// 4. Proses Login
 Route::post('/login', function (Request $request) {
     $credentials = $request->validate([
         'email' => ['required', 'email'],
@@ -59,8 +61,6 @@ Route::post('/login', function (Request $request) {
     return back()->withErrors(['email' => 'Email atau password salah.'])->onlyInput('email');
 })->middleware('guest');
 
-
-// 5. Proses Logout
 Route::post('/logout', function (Request $request) {
     Auth::logout();
     $request->session()->invalidate();
@@ -71,8 +71,7 @@ Route::post('/logout', function (Request $request) {
 
 // --- Rute GAME (Utama) ---
 
-// Halaman Depan (List Game)
-Route::get('/', [GameController::class, 'index'])->name('home');
+// Halaman Depan (List Game) - Sudah di handle di route '/' di atas.
 
 // Halaman Detail Game
 Route::get('/games/{game:title}', [GameController::class, 'show'])->name('games.show');
@@ -82,13 +81,10 @@ Route::post('/games/{game}/comments', [CommentController::class, 'store'])->midd
 
 
 // --- Rute ADMIN (Upload Game) ---
-
-Route::middleware(['auth', 'is_admin'])->group(function () {
+// Route ini hanya bisa diakses oleh user yang sudah login ('auth')
+Route::middleware(['auth'])->group(function () {
     // Tampilkan Form Upload
     Route::get('/admin/upload', [GameController::class, 'create'])->name('games.create');
     // Proses Simpan Game
     Route::post('/admin/upload', [GameController::class, 'store'])->name('games.store');
 });
-
-// Catatan: Anda perlu membuat Middleware 'is_admin' di Laravel jika ingin proteksi lebih kuat.
-// Untuk saat ini, cek Admin sudah dilakukan di dalam controller.

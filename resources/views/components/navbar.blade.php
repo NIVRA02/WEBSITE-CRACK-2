@@ -7,6 +7,16 @@
                 </div>
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="/contact" class="{{ request()->is('contact') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }} rounded-md px-3 py-2 text-sm font-medium">Contact Us</a>
+
+                        
+                        @auth
+                            @if(Auth::user()->is_admin)
+                                <a href="/admin/upload" class="{{ request()->is('admin/upload') ? 'bg-indigo-600/70 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }} px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150">
+                                    Upload Game
+                                </a>
+                            @endif
+                        @endauth
                         <a href="/" class="{{ request()->is('/') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }} rounded-md px-3 py-2 text-sm font-medium" aria-current="{{ request()->is('/') ? 'page' : 'false' }}">Home</a>
                         
                         <a href="/developer" class="{{ request()->is('developer') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }} rounded-md px-3 py-2 text-sm font-medium">Developer</a>
@@ -64,6 +74,15 @@
             
             <div class="-mr-2 flex md:hidden">
                 <button type="button" @click="isOpen = !isOpen" class="relative inline-flex items-center justify-center rounded-md bg-gray-800 p-2 text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800" aria-controls="mobile-menu" aria-expanded="false">
+                    <a href="/contact" class="{{ request()->is('contact') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }} block rounded-md px-3 py-2 text-base font-medium">Contact Us</a>
+                    {{-- Tambahan untuk Admin di Mobile --}}
+                    @auth
+                        @if(Auth::user()->is_admin)
+                            <a href="/admin/upload" class="{{ request()->is('admin/upload') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }} block rounded-md px-3 py-2 text-base font-medium">
+                                Upload Game
+                            </a>
+                        @endif
+                    @endauth
                     <span class="absolute -inset-0.5"></span>
                     <span class="sr-only">Open main menu</span>
                     <svg :class="{'hidden': isOpen, 'block': !isOpen }" class="block size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
