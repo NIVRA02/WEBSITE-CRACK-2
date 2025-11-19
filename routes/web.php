@@ -4,33 +4,22 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
-use App\Http\Controllers\GameController; // <--- WAJIB
-use App\Http\Controllers\CommentController; // <--- WAJIB
+use App\Http\Controllers\GameController;
+use App\Http\Controllers\CommentController;
 
-// --- Rute Halaman Statis ---
-// Route yang ini bisa tetap menggunakan fungsi (closure)
-Route::get('/', function () {
-    // Arahkan / ke controller index Game, bukan home view statis lagi
-    return app(GameController::class)->index(); 
-});
+// --- Halaman Statis ---
+Route::get('/Chatbot', function () { return view('Chatbot', ['title' => 'Chat Bot']); });
+Route::get('/contact', function () { return view('contact', ['title' => 'Contact Us']); });
 
-Route::get('/developer', function () {
-    return view('developer', ['title' => 'Developer']);
-});
-Route::get('/Chatbot', function () {
-    return view('Chatbot', ['title' => 'Chat Bot']);
-});
-Route::get('/contact', function () {
-    return view('contact', ['title' => 'Contact Us']);
-});
+// --- FITUR DEVELOPER (BARU) ---
+// 1. List Semua Developer
+Route::get('/developer', [GameController::class, 'developers']);
+// 2. List Game milik Developer tertentu
+Route::get('/developer/{developer}', [GameController::class, 'developerGames'])->name('developers.show');
 
 
-// --- Rute AUTHENTIKASI (Login, Register, Logout) ---
-// Gunakan route yang lebih rapi dengan nama
-Route::get('/register', function () {
-    return view('register', ['title' => 'Daftar Akun Baru']);
-})->name('register')->middleware('guest');
-
+// --- AUTHENTIKASI ---
+Route::get('/register', function () { return view('register', ['title' => 'Daftar Akun Baru']); })->name('register')->middleware('guest');
 Route::post('/register', function (Request $request) {
     $attributes = $request->validate([
         'name' => ['required', 'min:3', 'max:255'],
@@ -42,22 +31,13 @@ Route::post('/register', function (Request $request) {
     return redirect('/')->with('success', 'Pendaftaran berhasil! Selamat datang.');
 })->middleware('guest');
 
-
-Route::get('/login', function () {
-    return view('login', ['title' => 'Login Akun']);
-})->name('login')->middleware('guest');
-
+Route::get('/login', function () { return view('login', ['title' => 'Login Akun']); })->name('login')->middleware('guest');
 Route::post('/login', function (Request $request) {
-    $credentials = $request->validate([
-        'email' => ['required', 'email'],
-        'password' => ['required'],
-    ]);
-
+    $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required']]);
     if (Auth::attempt($credentials)) {
         $request->session()->regenerate();
         return redirect()->intended('/')->with('success', 'Anda berhasil masuk.');
     }
-
     return back()->withErrors(['email' => 'Email atau password salah.'])->onlyInput('email');
 })->middleware('guest');
 
@@ -69,22 +49,27 @@ Route::post('/logout', function (Request $request) {
 })->middleware('auth');
 
 
-// --- Rute GAME (Utama) ---
+// --- RUTE GAME ---
 
-// Halaman Depan (List Game) - Sudah di handle di route '/' di atas.
+// Halaman Utama (List Semua Game)
+Route::get('/', [GameController::class, 'index'])->name('home');
 
-// Halaman Detail Game
-Route::get('/games/{game:title}', [GameController::class, 'show'])->name('games.show');
-
-// Rute Komentar (Hanya user login)
-Route::post('/games/{game}/comments', [CommentController::class, 'store'])->middleware('auth');
-
-
-// --- Rute ADMIN (Upload Game) ---
-// Route ini hanya bisa diakses oleh user yang sudah login ('auth')
+// Admin (Upload, Edit, Hapus)
 Route::middleware(['auth'])->group(function () {
-    // Tampilkan Form Upload
     Route::get('/admin/upload', [GameController::class, 'create'])->name('games.create');
-    // Proses Simpan Game
     Route::post('/admin/upload', [GameController::class, 'store'])->name('games.store');
+    Route::get('/games/{game}/edit', [GameController::class, 'edit'])->name('games.edit');
+    Route::put('/games/{game}', [GameController::class, 'update'])->name('games.update');
+    Route::delete('/games/{game}', [GameController::class, 'destroy'])->name('games.destroy');
 });
+
+// Komentar
+Route::middleware('auth')->group(function () {
+    Route::post('/games/{game}/comments', [CommentController::class, 'store']);
+    Route::get('/comments/{comment}/edit', [CommentController::class, 'edit'])->name('comments.edit');
+    Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+});
+
+// Detail Game (Paling Bawah)
+Route::get('/games/{game:title}', [GameController::class, 'show'])->name('games.show');
