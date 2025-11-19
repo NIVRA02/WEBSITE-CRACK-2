@@ -6,9 +6,11 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ChatBotController;
 
 // --- Halaman Statis ---
-Route::get('/Chatbot', function () { return view('Chatbot', ['title' => 'Chat Bot']); });
+Route::get('/Chatbot', [ChatBotController::class, 'index']);
+Route::post('/chatbot/send', [ChatBotController::class, 'sendMessage']);
 Route::get('/contact', function () { return view('contact', ['title' => 'Contact Us']); });
 
 // --- FITUR DEVELOPER (BARU) ---
