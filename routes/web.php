@@ -4,36 +4,47 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Http\Controllers\GameController;
+use App\Http\Controllers\CommentController;
 
-
-// --- Halaman Utama ---
-Route::get('/', function () {
-    return view('home', ['title' => 'Home Page']);
-});
-
+// --- Rute Halaman Statis ---
 Route::get('/developer', function () {
     return view('developer', ['title' => 'Developer']);
 });
-
 Route::get('/Chatbot', function () {
     return view('Chatbot', ['title' => 'Chat Bot']);
 });
-
 Route::get('/contact', function () {
     return view('contact', ['title' => 'Contact Us']);
 });
 
 
+// --- Rute AUTHENTIKASI (Login, Register, Logout) ---
+
+// 1. Tampilkan Halaman Register
+Route::get('/register', function () {
+    return view('register', ['title' => 'Daftar Akun Baru']);
+})->name('register')->middleware('guest');
+
+// 2. Proses Data Register
+Route::post('/register', function (Request $request) {
+    $attributes = $request->validate([
+        'name' => ['required', 'min:3', 'max:255'],
+        'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+        'password' => ['required', 'min:5', 'max:255', 'confirmed'],
+    ]);
+    $user = User::create($attributes);
+    Auth::login($user);
+    return redirect('/')->with('success', 'Pendaftaran berhasil! Selamat datang.');
+})->middleware('guest');
 
 
-// --- Authentikasi (Login & Logout) ---
-
-// 1. Tampilkan Halaman Login
+// 3. Tampilkan Halaman Login
 Route::get('/login', function () {
-    return view('login', ['title' => 'Login']);
-})->name('login');
+    return view('login', ['title' => 'Login Akun']);
+})->name('login')->middleware('guest');
 
-// 2. Proses Login (POST)
+// 4. Proses Login
 Route::post('/login', function (Request $request) {
     $credentials = $request->validate([
         'email' => ['required', 'email'],
@@ -42,41 +53,42 @@ Route::post('/login', function (Request $request) {
 
     if (Auth::attempt($credentials)) {
         $request->session()->regenerate();
-        return redirect()->intended('/');
+        return redirect()->intended('/')->with('success', 'Anda berhasil masuk.');
     }
 
-    return back()->withErrors([
-        'email' => 'Email atau password salah.',
-    ])->onlyInput('email');
-});
+    return back()->withErrors(['email' => 'Email atau password salah.'])->onlyInput('email');
+})->middleware('guest');
 
-// 3. Proses Logout (POST)
+
+// 5. Proses Logout
 Route::post('/logout', function (Request $request) {
     Auth::logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
-    return redirect('/');
+    return redirect('/')->with('success', 'Anda berhasil keluar.');
+})->middleware('auth');
+
+
+// --- Rute GAME (Utama) ---
+
+// Halaman Depan (List Game)
+Route::get('/', [GameController::class, 'index'])->name('home');
+
+// Halaman Detail Game
+Route::get('/games/{game:title}', [GameController::class, 'show'])->name('games.show');
+
+// Rute Komentar (Hanya user login)
+Route::post('/games/{game}/comments', [CommentController::class, 'store'])->middleware('auth');
+
+
+// --- Rute ADMIN (Upload Game) ---
+
+Route::middleware(['auth', 'is_admin'])->group(function () {
+    // Tampilkan Form Upload
+    Route::get('/admin/upload', [GameController::class, 'create'])->name('games.create');
+    // Proses Simpan Game
+    Route::post('/admin/upload', [GameController::class, 'store'])->name('games.store');
 });
 
-Route::get('/register', function () {
-    return view('register', ['title' => 'Register']);
-});
-
-Route::post('/register', function (Request $request) {
-    // Validasi Input
-    $attributes = $request->validate([
-        'name' => ['required', 'min:3', 'max:255'],
-        'email' => ['required', 'email', 'max:255', 'unique:users,email'], // Pastikan email belum terpakai
-        'password' => ['required', 'min:5', 'max:255', 'confirmed'], // 'confirmed' cek kecocokan dengan password_confirmation
-    ]);
-
-    // Buat User Baru
-    // Password otomatis di-hash karena settingan di User Model
-    $user = User::create($attributes);
-
-    // Langsung Login otomatis setelah daftar
-    Auth::login($user);
-
-    // Redirect ke halaman utama
-    return redirect('/');
-});
+// Catatan: Anda perlu membuat Middleware 'is_admin' di Laravel jika ingin proteksi lebih kuat.
+// Untuk saat ini, cek Admin sudah dilakukan di dalam controller.
