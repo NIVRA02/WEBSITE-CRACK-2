@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use App\Models\Game; // <--- WAJIB ADA BIAR DIA BISA BACA DATABASE
+use App\Models\Game; 
 
 class ChatBotController extends Controller
 {
@@ -24,9 +24,6 @@ class ChatBotController extends Controller
         $userMessage = $request->input('message');
         $apiKey = env('GEMINI_API_KEY');
 
-        if (empty($apiKey)) {
-            return response()->json(['reply' => 'Duh sayang, API Key-nya lupa diisi di .env tuh. Cek dulu ya...']);
-        }
 
         // 1. AMBIL DATA GAME DARI DATABASE (Biar AI-nya Gak Halusinasi)
         $games = Game::all(['title', 'developer', 'description', 'requirements']);
@@ -40,7 +37,7 @@ class ChatBotController extends Controller
             $gameList = "Stok game lagi kosong nih sayang.";
         }
 
-        // 2. SETTING OTAK AI (Mami Mode + Data Game)
+   
         $systemContext = "
             PERAN:
             Kamu adalah 'Mami Nivra', asisten cantik penjaga website game 'NIVRA02'.
@@ -58,7 +55,7 @@ class ChatBotController extends Controller
             Jawablah pertanyaan user ini berdasarkan data di atas:
         ";
 
-        // Gunakan model terbaru biar gak error
+
         $model = 'gemini-2.5-flash'; 
 
         try {
