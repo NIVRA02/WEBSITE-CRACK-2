@@ -1,12 +1,6 @@
 <x-layout>
     <x-slot:title>{{$title}}</x-slot>
 
-    @if (session('success'))
-        <div class="bg-green-500 text-white p-4 rounded-lg mb-6">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="bg-red-500 text-white p-4 rounded-lg mb-6">{{ session('error') }}</div>
-    @endif
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         @forelse ($games as $game)

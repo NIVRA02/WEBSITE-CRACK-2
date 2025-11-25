@@ -6,11 +6,15 @@ use App\Models\Game;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB; // <--- Tambahan Penting
+use Illuminate\Support\Facades\DB; // PENTING: Untuk fitur developer
 
 class GameController extends Controller
 {
-    // 1. Halaman Utama (Semua Game)
+    // ==========================================
+    // BAGIAN 1: FITUR UNTUK USER (PUBLIC)
+    // ==========================================
+
+    // 1. Halaman Utama (List Semua Game)
     public function index()
     {
         $games = Game::latest()->get();
@@ -20,11 +24,15 @@ class GameController extends Controller
     // 2. Halaman Detail Game
     public function show(Game $game)
     {
+        // Ubah link youtube jadi embed code biar bisa diputar di web
         $videoId = $this->getYouTubeEmbedId($game->trailer_url);
-        return view('games.show', ['game' => $game, 'title' => $game->title, 'videoId' => $videoId]);
+        
+        return view('games.show', [
+            'game' => $game, 
+            'title' => $game->title, 
+            'videoId' => $videoId
+        ]);
     }
-
-    // --- BAGIAN BARU: FITUR DEVELOPER ---
 
     // 3. Halaman List Semua Developer
     public function developers()
@@ -41,7 +49,7 @@ class GameController extends Controller
         ]);
     }
 
-    // 4. Halaman Game per Developer
+    // 4. Halaman Game per Developer (Saat kartu developer diklik)
     public function developerGames($developer)
     {
         // Ambil semua game milik developer tersebut
@@ -54,18 +62,40 @@ class GameController extends Controller
         ]);
     }
 
-    // --- AKHIR BAGIAN BARU ---
+    // 5. Fitur Game Acak (Surprise Me)
+    public function random()
+    {
+        // Ambil 1 game secara acak dari database
+        $game = Game::inRandomOrder()->first();
 
-    // 5. Form Upload (Admin)
+        // Cek jika database kosong
+        if (!$game) {
+            return redirect('/')->with('error', 'Belum ada game yang bisa diacak nih, sayang.');
+        }
+
+        // Langsung lempar ke halaman detail game tersebut
+        return redirect()->route('games.show', $game->title);
+    }
+
+
+    // ==========================================
+    // BAGIAN 2: FITUR KHUSUS ADMIN (CRUD)
+    // ==========================================
+
+    // 6. Tampilkan Form Upload
     public function create()
     {
-        if (!Auth::user()->is_admin) return redirect('/')->with('error', 'Bukan Admin!');
+        // Cek apakah user adalah Admin
+        if (!Auth::user()->is_admin) {
+            return redirect('/')->with('error', 'Maaf sayang, halaman ini khusus Admin ya!');
+        }
         return view('games.create', ['title' => 'Upload Game Baru']);
     }
 
-    // 6. Proses Upload (Admin)
+    // 7. Proses Simpan Game Baru (Store)
     public function store(Request $request)
     {
+        // Validasi Keamanan
         if (!Auth::user()->is_admin) abort(403);
 
         $validated = $request->validate([
@@ -73,29 +103,35 @@ class GameController extends Controller
             'developer' => 'required|max:255',
             'description' => 'required',
             'requirements' => 'required',
-            'poster' => 'required|image|mimes:jpeg,png,jpg|max:4096',
+            'poster' => 'required|image|mimes:jpeg,png,jpg|max:4096', // Max 4MB
             'trailer_url' => 'nullable|url',
             'download_link' => 'required|url'
         ]);
 
+        // Upload Poster
         if ($request->hasFile('poster') && $request->file('poster')->isValid()) {
             $validated['poster'] = $request->file('poster')->store('posters', 'public');
         } else {
-            return back()->withErrors(['poster' => 'Gagal upload gambar. Cek ukuran file.']);
+            return back()->withErrors(['poster' => 'Gagal upload gambar. Pastikan ukurannya di bawah 4MB.']);
         }
 
         Game::create($validated);
-        return redirect('/')->with('success', 'Game berhasil diupload!');
+
+        return redirect('/')->with('success', 'Yeay! Game berhasil diupload!');
     }
 
-    // 7. Form Edit (Admin)
+    // 8. Tampilkan Form Edit
     public function edit(Game $game)
     {
         if (!Auth::user()->is_admin) abort(403);
-        return view('games.edit', ['game' => $game, 'title' => 'Edit Game']);
+        
+        return view('games.edit', [
+            'game' => $game, 
+            'title' => 'Edit Game'
+        ]);
     }
 
-    // 8. Proses Update (Admin)
+    // 9. Proses Update Game
     public function update(Request $request, Game $game)
     {
         if (!Auth::user()->is_admin) abort(403);
@@ -109,35 +145,55 @@ class GameController extends Controller
             'download_link' => 'required|url'
         ];
 
+        // Poster hanya divalidasi jika user mengupload file baru
         if ($request->hasFile('poster')) {
             $rules['poster'] = 'image|mimes:jpeg,png,jpg|max:4096';
         }
 
         $validated = $request->validate($rules);
 
+        // Cek jika ada poster baru
         if ($request->hasFile('poster') && $request->file('poster')->isValid()) {
-            if ($game->poster) Storage::disk('public')->delete($game->poster);
+            // Hapus poster lama biar gak menuhin server
+            if ($game->poster) {
+                Storage::disk('public')->delete($game->poster);
+            }
+            // Simpan poster baru
             $validated['poster'] = $request->file('poster')->store('posters', 'public');
         }
 
         $game->update($validated);
-        return redirect()->route('games.show', $game->title)->with('success', 'Game berhasil diupdate!');
+
+        return redirect()->route('games.show', $game->title)->with('success', 'Game berhasil diperbarui!');
     }
 
-    // 9. Proses Hapus (Admin)
+    // 10. Proses Hapus Game
     public function destroy(Game $game)
     {
         if (!Auth::user()->is_admin) abort(403);
 
-        if ($game->poster) Storage::disk('public')->delete($game->poster);
+        // Hapus file poster dari penyimpanan
+        if ($game->poster) {
+            Storage::disk('public')->delete($game->poster);
+        }
+
+        // Hapus data dari database
         $game->delete();
 
-        return redirect('/')->with('success', 'Game berhasil dihapus!');
+        return redirect('/')->with('success', 'Game berhasil dihapus permanen.');
     }
 
+    // ==========================================
+    // FUNGSI BANTUAN (HELPER)
+    // ==========================================
+
+    // Mengambil ID Video dari URL YouTube (agar bisa di-embed)
     private function getYouTubeEmbedId($url) {
-        if (preg_match('/watch\?v=([a-zA-Z0-9_-]+)/', $url, $matches)) return $matches[1];
-        elseif (preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $url, $matches)) return $matches[1];
+        if (preg_match('/watch\?v=([a-zA-Z0-9_-]+)/', $url, $matches)) {
+            return $matches[1];
+        } elseif (preg_match('/youtu\.be\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
+            return $matches[1];
+        }
         return null;
     }
 }

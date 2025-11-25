@@ -13,10 +13,11 @@ Route::get('/Chatbot', [ChatBotController::class, 'index']);
 Route::post('/chatbot/send', [ChatBotController::class, 'sendMessage']);
 Route::get('/contact', function () { return view('contact', ['title' => 'Contact Us']); });
 
-// --- FITUR DEVELOPER (BARU) ---
-// 1. List Semua Developer
+// --- FITUR GAME ACAK (BARU) ---
+Route::get('/random-game', [GameController::class, 'random'])->name('games.random');
+
+// --- FITUR DEVELOPER ---
 Route::get('/developer', [GameController::class, 'developers']);
-// 2. List Game milik Developer tertentu
 Route::get('/developer/{developer}', [GameController::class, 'developerGames'])->name('developers.show');
 
 
@@ -52,11 +53,8 @@ Route::post('/logout', function (Request $request) {
 
 
 // --- RUTE GAME ---
-
-// Halaman Utama (List Semua Game)
 Route::get('/', [GameController::class, 'index'])->name('home');
 
-// Admin (Upload, Edit, Hapus)
 Route::middleware(['auth'])->group(function () {
     Route::get('/admin/upload', [GameController::class, 'create'])->name('games.create');
     Route::post('/admin/upload', [GameController::class, 'store'])->name('games.store');
@@ -65,7 +63,6 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/games/{game}', [GameController::class, 'destroy'])->name('games.destroy');
 });
 
-// Komentar
 Route::middleware('auth')->group(function () {
     Route::post('/games/{game}/comments', [CommentController::class, 'store']);
     Route::get('/comments/{comment}/edit', [CommentController::class, 'edit'])->name('comments.edit');
@@ -73,5 +70,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 });
 
-// Detail Game (Paling Bawah)
 Route::get('/games/{game:title}', [GameController::class, 'show'])->name('games.show');
