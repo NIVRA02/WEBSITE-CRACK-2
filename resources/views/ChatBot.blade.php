@@ -62,9 +62,7 @@
             
             div.className = `flex items-start ${isUser ? 'justify-end' : ''}`;
             
-            // PROSES FORMATTING:
-            // Jika dari AI, kita pakai marked.parse() buat rapihin Markdown.
-            // Jika dari User, teks biasa aja.
+
             const formattedText = isUser ? text : marked.parse(text);
 
             div.innerHTML = `

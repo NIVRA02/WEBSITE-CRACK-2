@@ -6,13 +6,11 @@ use App\Models\Game;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB; // PENTING: Untuk fitur developer
+use Illuminate\Support\Facades\DB; 
 
 class GameController extends Controller
 {
-    // ==========================================
-    // BAGIAN 1: FITUR UNTUK USER (PUBLIC)
-    // ==========================================
+
 
     // 1. Halaman Utama (List Semua Game)
     public function index()
@@ -24,7 +22,7 @@ class GameController extends Controller
     // 2. Halaman Detail Game
     public function show(Game $game)
     {
-        // Ubah link youtube jadi embed code biar bisa diputar di web
+
         $videoId = $this->getYouTubeEmbedId($game->trailer_url);
         
         return view('games.show', [
@@ -37,7 +35,7 @@ class GameController extends Controller
     // 3. Halaman List Semua Developer
     public function developers()
     {
-        // Mengambil nama developer unik & menghitung jumlah game mereka
+
         $developers = Game::select('developer', DB::raw('count(*) as total_games'))
                           ->groupBy('developer')
                           ->orderBy('developer', 'asc')
@@ -52,10 +50,7 @@ class GameController extends Controller
     // 4. Halaman Game per Developer (Saat kartu developer diklik)
     public function developerGames($developer)
     {
-        // Ambil semua game milik developer tersebut
         $games = Game::where('developer', $developer)->latest()->get();
-        
-        // Kita gunakan tampilan 'games.index' yang sudah ada, tapi datanya kita filter
         return view('games.index', [
             'games' => $games, 
             'title' => 'Game oleh: ' . $developer
@@ -65,37 +60,33 @@ class GameController extends Controller
     // 5. Fitur Game Acak (Surprise Me)
     public function random()
     {
-        // Ambil 1 game secara acak dari database
         $game = Game::inRandomOrder()->first();
 
-        // Cek jika database kosong
+
         if (!$game) {
             return redirect('/')->with('error', 'Belum ada game yang bisa diacak nih, sayang.');
         }
 
-        // Langsung lempar ke halaman detail game tersebut
+
         return redirect()->route('games.show', $game->title);
     }
 
 
-    // ==========================================
-    // BAGIAN 2: FITUR KHUSUS ADMIN (CRUD)
-    // ==========================================
+
 
     // 6. Tampilkan Form Upload
     public function create()
     {
-        // Cek apakah user adalah Admin
+
         if (!Auth::user()->is_admin) {
             return redirect('/')->with('error', 'Maaf sayang, halaman ini khusus Admin ya!');
         }
         return view('games.create', ['title' => 'Upload Game Baru']);
     }
 
-    // 7. Proses Simpan Game Baru (Store)
+    // 7. Proses Simpan Game Baru 
     public function store(Request $request)
     {
-        // Validasi Keamanan
         if (!Auth::user()->is_admin) abort(403);
 
         $validated = $request->validate([
@@ -103,7 +94,7 @@ class GameController extends Controller
             'developer' => 'required|max:255',
             'description' => 'required',
             'requirements' => 'required',
-            'poster' => 'required|image|mimes:jpeg,png,jpg|max:4096', // Max 4MB
+            'poster' => 'required|image|mimes:jpeg,png,jpg|max:4096', 
             'trailer_url' => 'nullable|url',
             'download_link' => 'required|url'
         ]);
@@ -154,7 +145,6 @@ class GameController extends Controller
 
         // Cek jika ada poster baru
         if ($request->hasFile('poster') && $request->file('poster')->isValid()) {
-            // Hapus poster lama biar gak menuhin server
             if ($game->poster) {
                 Storage::disk('public')->delete($game->poster);
             }
@@ -183,9 +173,7 @@ class GameController extends Controller
         return redirect('/')->with('success', 'Game berhasil dihapus permanen.');
     }
 
-    // ==========================================
-    // FUNGSI BANTUAN (HELPER)
-    // ==========================================
+
 
     // Mengambil ID Video dari URL YouTube (agar bisa di-embed)
     private function getYouTubeEmbedId($url) {

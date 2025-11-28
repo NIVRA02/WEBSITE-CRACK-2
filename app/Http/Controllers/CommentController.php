@@ -22,7 +22,7 @@ class CommentController extends Controller
     // Form Edit Komentar -- BARU
     public function edit(Comment $comment)
     {
-        // Cek: Admin ATAU Pemilik Komentar boleh edit
+
         if (Auth::id() !== $comment->user_id && !Auth::user()->is_admin) {
             abort(403, 'Tidak diizinkan.');
         }

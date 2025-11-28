@@ -11,9 +11,10 @@ use App\Http\Controllers\ChatBotController;
 // --- Halaman Statis ---
 Route::get('/Chatbot', [ChatBotController::class, 'index']);
 Route::post('/chatbot/send', [ChatBotController::class, 'sendMessage']);
+
 Route::get('/contact', function () { return view('contact', ['title' => 'Contact Us']); });
 
-// --- FITUR GAME ACAK (BARU) ---
+// --- FITUR GAME ACAK  ---
 Route::get('/random-game', [GameController::class, 'random'])->name('games.random');
 
 // --- FITUR DEVELOPER ---
